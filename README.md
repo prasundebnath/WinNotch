@@ -11,9 +11,10 @@
 </div>
 
 ---
-<img width="370" height="139" alt="image" src="https://github.com/user-attachments/assets/291e5e82-bfd6-47ef-8778-b7e756bfda44" /><img width="476" height="187" alt="image" src="https://github.com/user-attachments/assets/71b7415b-e7a8-4831-981e-2ce08baf4fbf" />
-<img width="471" height="244" alt="Screenshot 2026-05-11 210512" src="https://github.com/user-attachments/assets/56efa076-9a52-403b-97fd-8110cc790b36" />
-<img width="696" height="272" alt="Screenshot 2026-05-11 210533" src="https://github.com/user-attachments/assets/7af74ea9-0df9-4d25-86d3-0302c8e7d4f1" />
+
+<img width="3276" height="1280" alt="winnotch v1 0" src="https://github.com/user-attachments/assets/194d7303-9c80-4f9a-bc7b-dfd80c58ff4b" />
+
+
 
 
 
@@ -90,6 +91,10 @@ WinNotch/
 ```
 
 ---
+
+<img width="370" height="139" alt="image" src="https://github.com/user-attachments/assets/291e5e82-bfd6-47ef-8778-b7e756bfda44" /><img width="476" height="187" alt="image" src="https://github.com/user-attachments/assets/71b7415b-e7a8-4831-981e-2ce08baf4fbf" />
+<img width="471" height="244" alt="Screenshot 2026-05-11 210512" src="https://github.com/user-attachments/assets/56efa076-9a52-403b-97fd-8110cc790b36" />
+<img width="696" height="272" alt="Screenshot 2026-05-11 210533" src="https://github.com/user-attachments/assets/7af74ea9-0df9-4d25-86d3-0302c8e7d4f1" />
 
 ## 📜 License
 
