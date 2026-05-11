@@ -4,8 +4,8 @@
 
 **A Dynamic Island–inspired media & clock overlay for Windows 11**
 
-[![Release](https://img.shields.io/github/v/release/PrasunPrabhat/WinNotch?style=flat-square&color=30D158)](https://github.com/PrasunPrabhat/WinNotch/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)](https://github.com/PrasunPrabhat/WinNotch)
+[![Release](https://img.shields.io/github/v/release/prasundebnath/WinNotch?style=flat-square&color=30D158)](https://github.com/prasundebnath/WinNotch/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)](https://github.com/prasundebnath/WinNotch)
 [![License](https://img.shields.io/badge/license-MIT-blueviolet?style=flat-square)](LICENSE)
 
 </div>
@@ -35,7 +35,7 @@ WinNotch sits silently in your taskbar notch area and springs to life when you h
 
 ## 🚀 Installation (No setup required)
 
-1. Go to the [**Releases**](https://github.com/PrasunPrabhat/WinNotch/releases/latest) page
+1. Go to the [**Releases**](https://github.com/prasundebnath/WinNotch/releases/latest) page
 2. Download **`WinNotch.exe`**
 3. Run it — no installer, no .NET download needed
 4. WinNotch starts minimised to the system tray area and is always on top
