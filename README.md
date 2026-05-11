@@ -47,7 +47,7 @@ WinNotch sits silently in your taskbar notch area and springs to life when you h
 ## 🛠 Build from source
 
 ```bash
-git clone https://github.com/PrasunPrabhat/WinNotch.git
+git clone https://github.com/prasundebnath/WinNotch.git
 cd WinNotch
 dotnet run
 ```
@@ -87,4 +87,4 @@ WinNotch/
 
 ## 📜 License
 
-MIT © Prasun Prabhat
+MIT © Prasun Debnath
