@@ -14,7 +14,7 @@
 
 ## ✨ What it does
 
-WinNotch sits silently in your taskbar notch area and springs to life when you hover over it — just like Apple's Dynamic Island, but for Windows.
+WinNotch sits silently on top of the screen and springs to life when you hover over it — just like Apple's Dynamic Island, but for Windows.
 
 | State | Behaviour |
 |---|---|
