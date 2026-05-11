@@ -1,0 +1,498 @@
+<Window x:Class="WinNotch.Views.NotchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WinNotch.ViewModels"
+        xmlns:conv="clr-namespace:WinNotch.Converters"
+        Title="WinNotch"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False">
+
+    <!-- =====================================================================
+         RESOURCES: Converters + Animations + Styles
+    ====================================================================== -->
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter  x:Key="BoolToVis"/>
+        <conv:NullToVisibilityConverter  x:Key="NullToVis"/>
+
+        <!-- ── Media control button style ── -->
+        <Style x:Key="MediaButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="18"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#22FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Play/Pause button: slightly larger -->
+        <Style x:Key="PlayPauseButtonStyle" TargetType="Button" BasedOn="{StaticResource MediaButtonStyle}">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+
+        <!-- Calendar day-of-week header cell style -->
+        <Style x:Key="CalDowStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF555555"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
+            <Setter Property="FontSize" Value="8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+
+        <!-- ── Expand animation: opacity only ──
+             Width/Height are driven by spring physics in code-behind. -->
+        <Storyboard x:Key="ExpandStoryboard">
+            <DoubleAnimation Storyboard.TargetName="MediaContent" Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" BeginTime="0:0:0.18" Duration="0:0:0.18"/>
+        </Storyboard>
+
+        <!-- ── Collapse animation: opacity only ── -->
+        <Storyboard x:Key="CollapseStoryboard">
+            <DoubleAnimation Storyboard.TargetName="MediaContent" Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.12">
+                <DoubleAnimation.EasingFunction><QuarticEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <!-- Clock storyboards removed — ClockPanel/MediaCard now use Visibility bindings
+             driven by IsClockVisible, which resets to false on every collapse. -->
+    </Window.Resources>
+
+    <!-- =====================================================================
+         ROOT: Transparent host panel
+         Background is {x:Null} so clicks pass through transparent areas.
+    ====================================================================== -->
+    <Grid>
+
+        <!-- Single closed path: the entire notch silhouette.
+             Pill body + outward anti-corner flanges, all as one WPF Path.
+             Rebuilt every SizeChanged frame in code-behind. -->
+        <Path x:Name="NotchPath"
+              Fill="{StaticResource NotchBlackBrush}"
+              HorizontalAlignment="Left" VerticalAlignment="Top"
+              IsHitTestVisible="False"
+              UseLayoutRounding="False">
+            <Path.Effect>
+                <DropShadowEffect Color="#CC000000"
+                                  BlurRadius="18"
+                                  ShadowDepth="5"
+                                  Opacity="0.70"
+                                  Direction="270"/>
+            </Path.Effect>
+        </Path>
+
+        <!-- Transparent layout host: drives Width/Height animations and mouse events.
+             The visual is rendered entirely by NotchPath above. -->
+        <Border x:Name="NotchBorder"
+                Width="200"
+                Height="36"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Background="Transparent"
+                Cursor="Hand"
+                ClipToBounds="True"
+                MouseEnter="NotchBorder_MouseEnter"
+                MouseLeave="NotchBorder_MouseLeave"
+                MouseWheel="NotchBorder_MouseWheel">
+
+            <!-- Inner content grid: collapsed pill + expanded media card -->
+            <Grid>
+
+                <!-- ── COLLAPSED STATE: cover art left, visualizer right ── -->
+                <Grid x:Name="CollapsedContent"
+                      Margin="12,4,12,4"
+                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- ── Mini Album Art (left) ── -->
+                    <Grid Grid.Column="0" VerticalAlignment="Center"
+                          Visibility="{Binding HasMedia, Converter={StaticResource BoolToVis}}">
+                        <!-- Actual art -->
+                        <Border CornerRadius="6" ClipToBounds="True"
+                                Width="26" Height="26"
+                                Visibility="{Binding AlbumArt, Converter={StaticResource NullToVis}}">
+                            <Image Source="{Binding AlbumArt}" Stretch="UniformToFill"/>
+                        </Border>
+                        <!-- Placeholder -->
+                        <Border CornerRadius="6" Width="26" Height="26"
+                                Background="#FF1C1C1E"
+                                Visibility="{Binding AlbumArt, Converter={StaticResource NullToVis}, ConverterParameter=Invert}">
+                            <TextBlock Text="♪" FontSize="12"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="#FF48484A"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- ── Track title (center) ── -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Title}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontFamily="Segoe UI Variable Display, Segoe UI"
+                               FontSize="11"
+                               FontWeight="Medium"
+                               MaxWidth="100"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               Visibility="{Binding HasMedia, Converter={StaticResource BoolToVis}}"/>
+
+                    <!-- No media: show current time -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding CurrentTime}"
+                               Foreground="#FFAAAAAA"
+                               FontFamily="Segoe UI Variable Display, Segoe UI"
+                               FontSize="11"
+                               FontWeight="Medium"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding HasMedia, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+
+                    <!-- ── 4-Bar Visualizer (right) ── -->
+                    <Grid Grid.Column="2" Height="18" Width="16"
+                          VerticalAlignment="Center" Margin="4,0,2,0"
+                          Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="5"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="3" CornerRadius="1.5"
+                                Background="#FF30D158" VerticalAlignment="Bottom">
+                            <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                     From="4" To="14" Duration="0:0:0.35"/>
+                                </Storyboard>
+                            </BeginStoryboard></EventTrigger></Border.Triggers>
+                        </Border>
+                        <Border Grid.Column="1" Width="3" CornerRadius="1.5"
+                                Background="#FF30D158" VerticalAlignment="Bottom">
+                            <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                     From="6" To="18" Duration="0:0:0.45"
+                                                     BeginTime="0:0:0.1"/>
+                                </Storyboard>
+                            </BeginStoryboard></EventTrigger></Border.Triggers>
+                        </Border>
+                        <Border Grid.Column="2" Width="3" CornerRadius="1.5"
+                                Background="#FF30D158" VerticalAlignment="Bottom">
+                            <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                     From="5" To="12" Duration="0:0:0.30"
+                                                     BeginTime="0:0:0.2"/>
+                                </Storyboard>
+                            </BeginStoryboard></EventTrigger></Border.Triggers>
+                        </Border>
+                        <Border Grid.Column="3" Width="3" CornerRadius="1.5"
+                                Background="#FF30D158" VerticalAlignment="Bottom">
+                            <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                     From="3" To="10" Duration="0:0:0.50"
+                                                     BeginTime="0:0:0.15"/>
+                                </Storyboard>
+                            </BeginStoryboard></EventTrigger></Border.Triggers>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- ══ EXPANDED STATE: full media card ══════════════════════ -->
+                <Grid x:Name="MediaContent"
+                      Opacity="0"
+                      Margin="18,10,18,10"
+                      Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- ── Row 0: Album art + Track info + Visualizer ── -->
+                    <Grid x:Name="MediaCard" Grid.Row="0"
+                          Visibility="{Binding IsClockVisible, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="78"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ── Album Art ── -->
+                        <Grid Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border CornerRadius="9" ClipToBounds="True"
+                                    Width="72" Height="72"
+                                    Visibility="{Binding AlbumArt, Converter={StaticResource NullToVis}}">
+                                <Image Source="{Binding AlbumArt}" Stretch="UniformToFill"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <Border CornerRadius="9" Width="72" Height="72"
+                                    Visibility="{Binding AlbumArt, Converter={StaticResource NullToVis}, ConverterParameter=Invert}">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#FF1C1C1E" Offset="0"/>
+                                        <GradientStop Color="#FF2C2C2E" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock Text="♪" FontSize="28"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="#FF48484A"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- ── Track Info ── -->
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Segoe UI Variable Display, Segoe UI"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Artist}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontFamily="Segoe UI Variable Text, Segoe UI"
+                                       FontSize="11" Margin="0,2,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       HorizontalAlignment="Left"/>
+                            <TextBlock Foreground="#FF30D158" FontSize="10" FontWeight="Medium"
+                                       FontFamily="Segoe UI Variable Text, Segoe UI"
+                                       Margin="0,6,0,0" HorizontalAlignment="Left"
+                                       Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}">NOW PLAYING</TextBlock>
+                            <TextBlock Foreground="#FF9A9A9A" FontSize="10" FontWeight="Medium"
+                                       FontFamily="Segoe UI Variable Text, Segoe UI"
+                                       Margin="0,6,0,0" HorizontalAlignment="Left"
+                                       Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">PAUSED</TextBlock>
+                        </StackPanel>
+
+                        <!-- ── Expanded Visualizer (right, animated) ── -->
+                        <Grid Grid.Column="2" Height="18" Width="16"
+                              VerticalAlignment="Center" Margin="8,0,0,0"
+                              Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="5"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="3" CornerRadius="1.5"
+                                    Background="#FF30D158" VerticalAlignment="Bottom">
+                                <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                         From="4" To="14" Duration="0:0:0.35"/>
+                                    </Storyboard>
+                                </BeginStoryboard></EventTrigger></Border.Triggers>
+                            </Border>
+                            <Border Grid.Column="1" Width="3" CornerRadius="1.5"
+                                    Background="#FF30D158" VerticalAlignment="Bottom">
+                                <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                         From="6" To="18" Duration="0:0:0.45"
+                                                         BeginTime="0:0:0.1"/>
+                                    </Storyboard>
+                                </BeginStoryboard></EventTrigger></Border.Triggers>
+                            </Border>
+                            <Border Grid.Column="2" Width="3" CornerRadius="1.5"
+                                    Background="#FF30D158" VerticalAlignment="Bottom">
+                                <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                         From="5" To="12" Duration="0:0:0.30"
+                                                         BeginTime="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard></EventTrigger></Border.Triggers>
+                            </Border>
+                            <Border Grid.Column="3" Width="3" CornerRadius="1.5"
+                                    Background="#FF30D158" VerticalAlignment="Bottom">
+                                <Border.Triggers><EventTrigger RoutedEvent="Loaded"><BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Height"
+                                                         From="3" To="10" Duration="0:0:0.50"
+                                                         BeginTime="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard></EventTrigger></Border.Triggers>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <!-- ── Row 1: Media Controls ── -->
+                    <StackPanel Grid.Row="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="0,8,0,2"
+                                Visibility="{Binding IsClockVisible, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
+                        <Button Command="{Binding PreviousTrackCommand}"
+                                Style="{StaticResource MediaButtonStyle}">
+                            <TextBlock Text="&#xE892;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        </Button>
+                        <Button Command="{Binding PlayPauseCommand}"
+                                Style="{StaticResource PlayPauseButtonStyle}" Margin="12,0">
+                            <Grid>
+                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="18" Foreground="{StaticResource TextPrimaryBrush}"
+                                           Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                                <TextBlock Text="&#xE769;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="18" Foreground="{StaticResource TextPrimaryBrush}"
+                                           Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Button>
+                        <Button Command="{Binding NextTrackCommand}"
+                                Style="{StaticResource MediaButtonStyle}">
+                            <TextBlock Text="&#xE893;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ══ CLOCK / CALENDAR OVERLAY ════════════════════════════════ -->
+                <!-- Sits on top of MediaContent in the same Grid cell; fades in on scroll -->
+                <Grid x:Name="ClockPanel"
+                      Margin="14,8,14,8"
+                      Visibility="{Binding IsClockVisible, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: large time + date -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <!-- Time row -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ClockTimeLarge}"
+                                       Foreground="White"
+                                       FontFamily="Segoe UI Variable Display, Segoe UI"
+                                       FontSize="42" FontWeight="Light"
+                                       VerticalAlignment="Bottom"/>
+                            <TextBlock Text="{Binding ClockPeriod}"
+                                       Foreground="#FF888888"
+                                       FontFamily="Segoe UI Variable Display, Segoe UI"
+                                       FontSize="14" FontWeight="Light"
+                                       VerticalAlignment="Bottom" Margin="5,0,0,6"/>
+                        </StackPanel>
+                        <!-- Date -->
+                        <TextBlock Text="{Binding ClockDateLine}"
+                                   Foreground="#FF888888"
+                                   FontFamily="Segoe UI Variable Text, Segoe UI"
+                                   FontSize="11" Margin="2,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- Right: mini calendar -->
+                    <Border Grid.Column="1" CornerRadius="10"
+                            Background="#1AFFFFFF" Padding="8,6">
+                        <StackPanel>
+                            <!-- Month header -->
+                            <TextBlock Text="{Binding CalendarMonth}"
+                                       Foreground="#FF30D158"
+                                       FontFamily="Segoe UI Variable Display, Segoe UI"
+                                       FontSize="9" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,4"/>
+                            <!-- Day-of-week header -->
+                            <ItemsControl>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.Items>
+                                    <TextBlock Text="M" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="T" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="W" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="T" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="F" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="S" Style="{StaticResource CalDowStyle}"/>
+                                    <TextBlock Text="S" Style="{StaticResource CalDowStyle}"/>
+                                </ItemsControl.Items>
+                            </ItemsControl>
+                            <!-- Calendar day cells -->
+                            <ItemsControl ItemsSource="{Binding CalendarDays}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="6" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="18" Height="18" CornerRadius="9"
+                                                Margin="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                            <Setter Property="Background" Value="#FF30D158"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Label}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       FontFamily="Segoe UI Variable Text, Segoe UI"
+                                                       FontSize="8.5">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#FF666666"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCurrentMonth}" Value="True">
+                                                                <Setter Property="Foreground" Value="#FFDDDDDD"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+            </Grid>
+        </Border>
+    </Grid>
+
+</Window>
