@@ -2,7 +2,7 @@
 
 # 🪨 WinNotch
 
-**A Dynamic Island–inspired media & clock overlay for Windows 11**
+**A Dynamic Island–inspired media & clock overlay for Windows**
 
 [![Release](https://img.shields.io/github/v/release/prasundebnath/WinNotch?style=flat-square&color=30D158)](https://github.com/prasundebnath/WinNotch/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)](https://github.com/prasundebnath/WinNotch)
