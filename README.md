@@ -2,19 +2,26 @@
 
 # 🪨 WinNotch
 
-**A Dynamic Island–inspired media & clock overlay for Windows 11**
+**A Dynamic Island–inspired media & clock overlay for Windows**
 
-[![Release](https://img.shields.io/github/v/release/PrasunPrabhat/WinNotch?style=flat-square&color=30D158)](https://github.com/PrasunPrabhat/WinNotch/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)](https://github.com/PrasunPrabhat/WinNotch)
+[![Release](https://img.shields.io/github/v/release/prasundebnath/WinNotch?style=flat-square&color=30D158)](https://github.com/prasundebnath/WinNotch/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)](https://github.com/prasundebnath/WinNotch)
 [![License](https://img.shields.io/badge/license-MIT-blueviolet?style=flat-square)](LICENSE)
 
 </div>
 
 ---
 
+<img width="3276" height="1280" alt="winnotch v1 0" src="https://github.com/user-attachments/assets/194d7303-9c80-4f9a-bc7b-dfd80c58ff4b" />
+
+
+
+
+
 ## ✨ What it does
 
-WinNotch sits silently in your taskbar notch area and springs to life when you hover over it — just like Apple's Dynamic Island, but for Windows.
+
+WinNotch sits silently on top of the screen and springs to life when you hover over it — just like Apple's Dynamic Island, but for Windows.
 
 | State | Behaviour |
 |---|---|
@@ -35,7 +42,7 @@ WinNotch sits silently in your taskbar notch area and springs to life when you h
 
 ## 🚀 Installation (No setup required)
 
-1. Go to the [**Releases**](https://github.com/PrasunPrabhat/WinNotch/releases/latest) page
+1. Go to the [**Releases**](https://github.com/prasundebnath/WinNotch/releases/latest) page
 2. Download **`WinNotch.exe`**
 3. Run it — no installer, no .NET download needed
 4. WinNotch starts minimised to the system tray area and is always on top
@@ -47,7 +54,7 @@ WinNotch sits silently in your taskbar notch area and springs to life when you h
 ## 🛠 Build from source
 
 ```bash
-git clone https://github.com/PrasunPrabhat/WinNotch.git
+git clone https://github.com/prasundebnath/WinNotch.git
 cd WinNotch
 dotnet run
 ```
@@ -85,6 +92,10 @@ WinNotch/
 
 ---
 
+<img width="370" height="139" alt="image" src="https://github.com/user-attachments/assets/291e5e82-bfd6-47ef-8778-b7e756bfda44" /><img width="476" height="187" alt="image" src="https://github.com/user-attachments/assets/71b7415b-e7a8-4831-981e-2ce08baf4fbf" />
+<img width="471" height="244" alt="Screenshot 2026-05-11 210512" src="https://github.com/user-attachments/assets/56efa076-9a52-403b-97fd-8110cc790b36" />
+<img width="696" height="272" alt="Screenshot 2026-05-11 210533" src="https://github.com/user-attachments/assets/7af74ea9-0df9-4d25-86d3-0302c8e7d4f1" />
+
 ## 📜 License
 
-MIT © Prasun Prabhat
+MIT © Prasun Debnath
