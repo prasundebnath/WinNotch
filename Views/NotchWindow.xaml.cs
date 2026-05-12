@@ -32,6 +32,34 @@ public partial class NotchWindow : Window
     private const int  WS_EX_APPWINDOW   = 0x00040000; // forces taskbar presence — must remove
     private const int  WS_EX_NOACTIVATE  = 0x08000000; // clicks never steal focus
 
+    [DllImport("shell32.dll")]
+    private static extern uint SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
+
+    private const uint ABM_NEW = 0x0000;
+    private const uint ABM_REMOVE = 0x0001;
+    private const uint ABM_SETPOS = 0x0003;
+    private const uint ABE_TOP = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(
         IntPtr hWnd, IntPtr hWndInsertAfter,
@@ -130,6 +158,7 @@ public partial class NotchWindow : Window
     {
         HideFromTaskbar();           // must run before anything else makes the window visible
         PositionFullWidth();
+        RegisterAppBar();            // Reserve screen space for the notch
         SetupTopmostEnforcement();
         // Draw the initial notch shape
         RebuildNotchPath(NotchBorder.ActualWidth, NotchBorder.ActualHeight);
@@ -148,6 +177,35 @@ public partial class NotchWindow : Window
         exStyle |=  WS_EX_NOACTIVATE;   // never steal focus
         exStyle &= ~WS_EX_APPWINDOW;    // remove forced-taskbar flag
         SetExStyle(_hwnd, exStyle);
+    }
+
+    private void RegisterAppBar()
+    {
+        var abd = new APPBARDATA();
+        abd.cbSize = Marshal.SizeOf(abd);
+        abd.hWnd = _hwnd;
+        abd.uCallbackMessage = 0x0400 + 100; // WM_USER + 100
+
+        SHAppBarMessage(ABM_NEW, ref abd);
+
+        abd.uEdge = ABE_TOP;
+        abd.rc.left = 0;
+        abd.rc.right = (int)SystemParameters.PrimaryScreenWidth;
+        abd.rc.top = 0;
+        abd.rc.bottom = 36; // Reserve 36 logical pixels for the collapsed notch
+
+        SHAppBarMessage(ABM_SETPOS, ref abd);
+    }
+
+    private void RemoveAppBar()
+    {
+        if (_hwnd != IntPtr.Zero)
+        {
+            var abd = new APPBARDATA();
+            abd.cbSize = Marshal.SizeOf(abd);
+            abd.hWnd = _hwnd;
+            SHAppBarMessage(ABM_REMOVE, ref abd);
+        }
     }
 
     // ── Positioning ───────────────────────────────────────────────────────────
@@ -421,6 +479,7 @@ public partial class NotchWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        RemoveAppBar(); // Restore screen space
         CompositionTarget.Rendering -= OnSpringRendering; // ensure cleanup
         _topmostTimer?.Stop();
         _vm.PropertyChanged -= Vm_PropertyChanged;
